@@ -1,0 +1,63 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  brandName   String
+  status      ReportStatus @default(PENDING)
+  accessToken String?      @unique
+  previewData Json?
+  fullReport  Json?
+  createdAt   DateTime     @default(now())
+
+  jobs Job[]
+
+  @@map("reports")
+}
+
+model Job {
+  id        String    @id @default(uuid())
+  reportId  String
+  type      JobType
+  status    JobStatus @default(PENDING)
+  result    Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("jobs")
+}
+
+model StripeEvent {
+  id        String   @id
+  payload   Json
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("stripe_events")
+}
+
+enum ReportStatus {
+  PENDING
+  PAID
+  ERROR
+}
+
+enum JobType {
+  BASIC_CHECK
+  ADVANCED_CHECK
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  ERROR
+}

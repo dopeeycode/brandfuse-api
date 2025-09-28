@@ -1,0 +1,19 @@
+{
+  "name": "brandfuse-server",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "elysia": "latest",
+    "prismabox": "^1.1.25",
+    "stripe": "^18.5.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "prisma": "^6.16.2"
+  },
+  "module": "src/index.js"
+}
