@@ -7,7 +7,6 @@ export const reportRoutes = new Elysia()
     const { brandName } = body as { brandName: string };
     if (!brandName) return { error: "brandName is required" };
 
-    // 1️⃣ Cria registro inicial no DB
     const report = await prisma.report.create({
       data: {
         brandName,
@@ -22,7 +21,6 @@ export const reportRoutes = new Elysia()
       },
     });
 
-    // 2️⃣ Cria sessão do Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -71,7 +69,6 @@ export const reportRoutes = new Elysia()
         return { status: 403, body: "Report not paid yet" };
       }
 
-      // Retorna o fullReport
       return { status: 200, body: report.fullReport };
     } catch (err) {
       console.error("Error fetching report:", err);

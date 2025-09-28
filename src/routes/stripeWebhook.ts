@@ -17,7 +17,6 @@ export const stripeWebhookRoutes = new Elysia()
     let event: any;
 
     try {
-      // Para teste local: se não houver secret, usa JSON direto
       if (!STRIPE_WEBHOOK_SECRET) {
         console.log(
           "⚠️ Stripe Webhook secret not defined, skipping signature check for local test"
@@ -36,7 +35,6 @@ export const stripeWebhookRoutes = new Elysia()
       return { status: 400, body: `Webhook Error: ${(err as Error).message}` };
     }
 
-    // Processa apenas checkout.session.completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as any;
       const reportId: string | undefined = session?.metadata?.reportId;
@@ -47,7 +45,6 @@ export const stripeWebhookRoutes = new Elysia()
       }
 
       try {
-        // Verifica se já foi processado (idempotência)
         const existingReport = await prisma.report.findUnique({
           where: { id: reportId },
         });
@@ -60,10 +57,8 @@ export const stripeWebhookRoutes = new Elysia()
           return { status: 200, body: "Already processed" };
         }
 
-        // Gera accessToken único
         const accessToken = randomUUID();
 
-        // Mock de fullReport (substituir por lógica real depois)
         const fullReport = {
           whois: "available",
           website: "ok",
@@ -74,7 +69,6 @@ export const stripeWebhookRoutes = new Elysia()
           advancedChecks: ["Trademark check", "Auction analysis", "Domain history"],
         };
 
-        // Atualiza no banco
         await prisma.report.update({
           where: { id: reportId },
           data: {
