@@ -1,54 +1,60 @@
 import { Elysia } from "elysia";
 import { prisma } from "../lib/prisma";
 import { stripe } from "../lib/stripe";
+import { getPreviewData } from "../lib/preview";
+import { randomUUIDv7 } from "bun";
 
 export const reportRoutes = new Elysia()
-  .post("/api/reports/start", async ({ body }) => {
-    const { brandName } = body as { brandName: string };
-    if (!brandName) return { error: "brandName is required" };
+  .post("/api/reports/start",
+  async ({ body }) => {
+    const { brandName } = body as { brandName?: string };
+    if (!brandName) return { status: 400, body: "brandName is required" };
 
-    const report = await prisma.report.create({
-      data: {
-        brandName,
-        status: "PENDING",
-        previewData: {
-          whois: "available",
-          website: "ok",
-          instagram: "ok",
-          twitter: "ok",
-          facebook: "ok",
+    try {
+      const previewData = await getPreviewData(brandName);
+
+      const reportId = randomUUIDv7();
+      await prisma.report.create({
+        data: {
+          id: reportId,
+          brandName,
+          status: "PENDING",
+          previewData,
         },
-      },
-    });
+      });
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "brl",
-            product_data: {
-              name: "BrandFuse Strategic Report",
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "brl",
+              product_data: { name: `Relatório Estratégico ${brandName}` },
+              unit_amount: 499, // R$ 4,99
             },
-            unit_amount: 499, // R$4,99
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        reportId: report.id,
-      },
-      success_url: `${process.env.FRONTEND_URL}/success?reportId=${report.id}`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-    });
+        ],
+        mode: "payment",
+        success_url: `http://localhost:3000/success?reportId=${reportId}`,
+        cancel_url: `http://localhost:3000/cancel`,
+        metadata: { reportId },
+      });
 
-    return {
-      reportId: report.id,
-      checkoutUrl: session.url,
-      previewData: report.previewData,
-    };
-  }) 
+      return {
+        status: 200,
+        body: {
+          reportId,
+          checkoutUrl: session.url,
+          previewData,
+        },
+      };
+    } catch (err) {
+      console.error("Failed to start report:", err);
+      return { status: 500, body: "Internal Server Error" };
+    }
+  }
+)
   .get("/api/reports/:accessToken", async ({ params }) => {
     const accessToken = params.accessToken as string;
 
